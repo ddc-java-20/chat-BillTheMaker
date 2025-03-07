@@ -69,7 +69,7 @@ public class ChannelController {
     channelService.remove(externalKey);
   }
 
-  @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+  @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE, params = {"active"})
   public List<Channel> getByActive(@RequestParam() boolean active) {
     return channelService.getAllByActive(active);
   }
