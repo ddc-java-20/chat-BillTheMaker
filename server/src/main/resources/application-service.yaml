@@ -2,7 +2,7 @@ server:
   error:
     include-message: always
   forward-headers-strategy: framework
-  port: 8090
+  port: 8040
   servlet:
     context-path: /chat
 

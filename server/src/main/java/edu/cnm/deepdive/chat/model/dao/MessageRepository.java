@@ -11,6 +11,19 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
+  String LATEST_POSTED_QUERY = """
+      SELECT
+        m.posted
+      FROM
+        Message AS m
+      WHERE
+        m.channel = :channel
+        AND m.posted > :posted
+      ORDER BY
+        m.posted DESC
+      """;
+
+
   List<Message> getAllByChannelAndPostedAfterOrderByPostedAsc(Channel channel, Instant posted);
 
 

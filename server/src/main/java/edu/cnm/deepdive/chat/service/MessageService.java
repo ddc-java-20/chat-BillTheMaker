@@ -21,12 +21,12 @@ import org.springframework.web.context.request.async.DeferredResult;
 @Service
 public class MessageService implements AbstractMessageService {
 
-  private static final Duration MAX_SINCE_DURATION = Duration.ofSeconds(Long.MAX_VALUE);
+  private static final Duration MAX_SINCE_DURATION = Duration.ofMinutes(30);
   private static final Long POLLING_TIMEOUT_MS = 20_000L;
   private static final int POLLING_POOL_SIZE = 4;
   private static final Long POLLING_INTERVAL_MS = 2000L;
-  public static final PageRequest TOP_ONE = PageRequest.of(0, 1);
-  public static final List<Message> EMPTY_MESSAGE_LIST = List.of();
+  private static final PageRequest TOP_ONE = PageRequest.of(0, 1);
+  private static final List<Message> EMPTY_MESSAGE_LIST = List.of();
 
   private final MessageRepository messageRepository;
   private final ChannelRepository channelRepository;
@@ -55,15 +55,15 @@ public class MessageService implements AbstractMessageService {
         .orElseThrow();
   }
 
+  @Override
   public DeferredResult<List<Message>> pollSince(UUID channelKey, Instant since) {
     return channelRepository
         .findByExternalKey(channelKey)
-        .map((channel) -> setupPolling(since, channel))
+        .map((channel) -> setupPolling(channel, since))
         .orElseThrow();
-
   }
 
-  private DeferredResult<List<Message>> setupPolling(Instant since, Channel channel) {
+  private DeferredResult<List<Message>> setupPolling(Channel channel, Instant since) {
     DeferredResult<List<Message>> result = new DeferredResult<>(POLLING_TIMEOUT_MS);
     ScheduledFuture<?>[] futurePolling = new ScheduledFuture<?>[1];
     Runnable timeoutTask = () -> timeoutWithEmptyList(result, futurePolling);
@@ -74,21 +74,19 @@ public class MessageService implements AbstractMessageService {
     return result;
   }
 
-  private static void timeoutWithEmptyList(DeferredResult<List<Message>> result,
-      ScheduledFuture<?>[] futurePolling) {
+  private static void timeoutWithEmptyList(
+      DeferredResult<List<Message>> result, ScheduledFuture<?>[] futurePolling) {
     result.setResult(EMPTY_MESSAGE_LIST);
     futurePolling[0].cancel(true);
   }
 
   private void checkForNewMessages(Channel channel, Instant since,
-      DeferredResult<List<Message>> result,
-      ScheduledFuture<?>[] futurePolling) {
+      DeferredResult<List<Message>> result, ScheduledFuture<?>[] futurePolling) {
     if (!messageRepository
         .getLastPostedByChannelAndPostedAfter(channel, since, TOP_ONE)
         .isEmpty()) {
-        result.setResult(
-          messageRepository
-              .getAllByChannelAndPostedAfterOrderByPostedAsc(channel, since));
+      result.setResult(
+          messageRepository.getAllByChannelAndPostedAfterOrderByPostedAsc(channel, since));
       futurePolling[0].cancel(true);
     }
   }
@@ -115,3 +113,4 @@ public class MessageService implements AbstractMessageService {
   }
 
 }
+
