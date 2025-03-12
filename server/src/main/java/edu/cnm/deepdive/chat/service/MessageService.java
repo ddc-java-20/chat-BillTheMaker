@@ -7,13 +7,14 @@ import edu.cnm.deepdive.chat.model.entity.Message;
 import edu.cnm.deepdive.chat.model.entity.User;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.async.DeferredResult;
 
@@ -23,6 +24,9 @@ public class MessageService implements AbstractMessageService {
   private static final Duration MAX_SINCE_DURATION = Duration.ofSeconds(Long.MAX_VALUE);
   private static final Long POLLING_TIMEOUT_MS = 20_000L;
   private static final int POLLING_POOL_SIZE = 4;
+  private static final Long POLLING_INTERVAL_MS = 2000L;
+  public static final PageRequest TOP_ONE = PageRequest.of(0, 1);
+  public static final List<Message> EMPTY_MESSAGE_LIST = List.of();
 
   private final MessageRepository messageRepository;
   private final ChannelRepository channelRepository;
@@ -32,42 +36,61 @@ public class MessageService implements AbstractMessageService {
   public MessageService(MessageRepository messageRepository, ChannelRepository channelRepository) {
     this.messageRepository = messageRepository;
     this.channelRepository = channelRepository;
+    scheduler = Executors.newScheduledThreadPool(POLLING_POOL_SIZE);
   }
 
   @Override
   public List<Message> add(Message message, UUID channelKey, User author, Instant since) {
     return channelRepository
         .findByExternalKey(channelKey)
-        .map((channel) -> {
-          return addAndRefresh(message, author, since, channel);
-        })
+        .map((channel) -> addAndRefresh(message, author, since, channel))
         .orElseThrow();
   }
 
   @Override
   public List<Message> getSince(UUID channelKey, Instant since) {
-
     return channelRepository
         .findByExternalKey(channelKey)
-        .map((Channel channel) -> getSinceAtMost(since, channel))
+        .map((channel) -> getSinceAtMost(since, channel))
         .orElseThrow();
   }
 
   public DeferredResult<List<Message>> pollSince(UUID channelKey, Instant since) {
+    return channelRepository
+        .findByExternalKey(channelKey)
+        .map((channel) -> setupPolling(since, channel))
+        .orElseThrow();
+
+  }
+
+  private DeferredResult<List<Message>> setupPolling(Instant since, Channel channel) {
     DeferredResult<List<Message>> result = new DeferredResult<>(POLLING_TIMEOUT_MS);
-    ScheduledFuture<?>[] future = new ScheduledFuture<?>[1];
-    result.onTimeout(() -> {
-      result.setResult(List.of());
-      future[0].cancel(true);
-    });
-    Runnable runnable = () ->  {
-      if (!messageRepository.getAllByChannelAndPostedAfterOrderByPostedAsc( , since).isEmpty()) {
-        result.setResult(messageRepository.getAllByChannelAndPostedAfterOrderByPostedAsc(, since));
-        future[0].cancel(true);
-      }
-    };
-    future[0] = scheduler.scheduleWithFixedDelay(runnable, 2000L, 2000L, TimeUnit.MILLISECONDS);
+    ScheduledFuture<?>[] futurePolling = new ScheduledFuture<?>[1];
+    Runnable timeoutTask = () -> timeoutWithEmptyList(result, futurePolling);
+    result.onTimeout(timeoutTask);
+    Runnable pollingTask = () -> checkForNewMessages(channel, since, result, futurePolling);
+    futurePolling[0] = scheduler.scheduleWithFixedDelay(
+        pollingTask, POLLING_INTERVAL_MS, POLLING_INTERVAL_MS, TimeUnit.MILLISECONDS);
     return result;
+  }
+
+  private static void timeoutWithEmptyList(DeferredResult<List<Message>> result,
+      ScheduledFuture<?>[] futurePolling) {
+    result.setResult(EMPTY_MESSAGE_LIST);
+    futurePolling[0].cancel(true);
+  }
+
+  private void checkForNewMessages(Channel channel, Instant since,
+      DeferredResult<List<Message>> result,
+      ScheduledFuture<?>[] futurePolling) {
+    if (!messageRepository
+        .getLastPostedByChannelAndPostedAfter(channel, since, TOP_ONE)
+        .isEmpty()) {
+        result.setResult(
+          messageRepository
+              .getAllByChannelAndPostedAfterOrderByPostedAsc(channel, since));
+      futurePolling[0].cancel(true);
+    }
   }
 
   private List<Message> getSinceAtMost(Instant since, Channel channel) {
@@ -76,17 +99,19 @@ public class MessageService implements AbstractMessageService {
         .getAllByChannelAndPostedAfterOrderByPostedAsc(channel, effectiveSince);
   }
 
-  private List<Message> addAndRefresh(Message message, User author, Instant since, Channel channel) {
+  private List<Message> addAndRefresh(
+      Message message, User author, Instant since, Channel channel) {
     message.setChannel(channel);
     message.setSender(author);
     messageRepository.save(message);
-    getEffectiveSince(since);
+    Instant effectiveSince = getEffectiveSince(since);
     return messageRepository
-        .getAllByChannelAndPostedAfterOrderByPostedAsc(channel, since);
+        .getAllByChannelAndPostedAfterOrderByPostedAsc(channel, effectiveSince);
   }
 
   private static Instant getEffectiveSince(Instant since) {
     Instant earliestSince = Instant.now().minus(MAX_SINCE_DURATION);
     return (since.isBefore(earliestSince)) ? earliestSince : since;
   }
+
 }
