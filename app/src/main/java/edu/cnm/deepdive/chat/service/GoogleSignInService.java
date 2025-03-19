@@ -48,6 +48,11 @@ public class GoogleSignInService {
         .observeOn(Schedulers.io());
   }
 
+  public Single<String> refreshBearerToken() {
+    return refresh()
+        .map(GoogleSignInAccount::getIdToken);
+  }
+
   public void startSignIn(ActivityResultLauncher<Intent> launcher) {
     launcher.launch(client.getSignInIntent());
   }

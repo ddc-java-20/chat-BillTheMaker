@@ -5,7 +5,7 @@ java="21" # For a non-Android project, this may be changed to 21.
 kotlin="2.1.0"
 
 # Core Android plugin and library versions
-android-gradle = "8.8.0"
+android-gradle = "8.7.3"
 app-compat = "1.7.0"
 lifecycle = "2.8.7"
 navigation = "2.8.8"
