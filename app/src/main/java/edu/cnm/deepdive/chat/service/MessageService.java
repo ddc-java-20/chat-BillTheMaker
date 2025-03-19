@@ -31,7 +31,7 @@ public class MessageService {
     scheduler = Schedulers.io();
   }
 
-  Single<List<Message>> getMessages(UUID channelKey, Instant since) {
+  public Single<List<Message>> getMessages(UUID channelKey, Instant since) {
     return signInService
         .refreshBearerToken()
         .observeOn(scheduler)
@@ -41,7 +41,7 @@ public class MessageService {
         .subscribeOn(scheduler);
   }
 
-  Single<List<Message>> sendMessage(UUID channelKey, Message message, Instant since) {
+  public Single<List<Message>> sendMessage(UUID channelKey, Message message, Instant since) {
     // TODO: 3/19/2025 refresh bearer token and pass downstream.
     return signInService
         .refreshBearerToken()
@@ -51,7 +51,7 @@ public class MessageService {
           .postMessage(message, channelKey, since.toEpochMilli(), bearerToken));
   }
 
-  Single<List<Channel>> getchannels(boolean active) {
+  public Single<List<Channel>> getchannels(boolean active) {
     // TODO: 3/19/2025 refresh bearer token and pass downstream
     return signInService
         .refreshBearerToken()
