@@ -18,10 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.DeferredResult;
 
 @RestController
-@RequestMapping("/channels.{channelKey}/messages")
+@RequestMapping("/channels/{channelKey}/messages")
 public class MessageController {
 
-  private static final String DEFAULT_SINCE_VALUE = "" + Long.MIN_VALUE;
+  private static final String DEFAULT_SINCE_VALUE = "-1000000000-01-01T00:00:00Z";
+
   private final AbstractMessageService messageService;
   private final AbstractUserService userService;
 
@@ -35,15 +36,15 @@ public class MessageController {
   public List<Message> post(
       @RequestBody Message message,
       @PathVariable UUID channelKey,
-      @RequestParam(required = false, defaultValue = DEFAULT_SINCE_VALUE) long since
+      @RequestParam(required = false, defaultValue = DEFAULT_SINCE_VALUE) Instant since
   ) {
-    return messageService.add(message, channelKey, userService.getCurrent(), Instant.ofEpochMilli(since));
+    return messageService.add(message, channelKey, userService.getCurrent(), since);
   }
 
   @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public DeferredResult<List<Message>> get(
       @PathVariable UUID channelKey,
-      @RequestParam(required = false, defaultValue = DEFAULT_SINCE_VALUE) long since) {
-    return messageService.pollSince(channelKey, Instant.ofEpochMilli(since));
+      @RequestParam(required = false, defaultValue = DEFAULT_SINCE_VALUE) Instant since) {
+    return messageService.pollSince(channelKey, since);
   }
 }

@@ -10,7 +10,7 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
 
   List<Channel> getAllByOrderByNameAsc();
 
-  List<Channel> getAllByActiveOrderByNameDesc(boolean active);
+  List<Channel> getAllByActiveOrderByNameAsc(boolean active);
 
   Optional<Channel> findByExternalKey(UUID externalKey);
 

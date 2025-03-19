@@ -65,7 +65,7 @@ public class ProxyModule {
 
   @Provides
   @Singleton
-  ChatServiceProxy provideLongPollingProxy(
+  ChatServiceLongPollingProxy provideLongPollingProxy(
       @ApplicationContext Context context, Gson gson, Interceptor interceptor) {
     OkHttpClient client = new OkHttpClient.Builder()
         .addInterceptor(interceptor)

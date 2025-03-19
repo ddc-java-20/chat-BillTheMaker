@@ -75,16 +75,14 @@ class ChannelService implements AbstractChannelService{
   public void remove(UUID externalKey) {
     channelRepository
         .findByExternalKey(externalKey)
-        .ifPresent((channel) -> channelRepository.delete(channel));
+        .ifPresent(channelRepository::delete);
   }
 
   @Override
-  public List<Channel> getAll() {
-    return List.of();
-  }
+  public List<Channel> getAll() { return channelRepository.getAllByOrderByNameAsc();}
 
   @Override
   public List<Channel> getAllByActive(boolean active) {
-    return List.of();
+    return channelRepository.getAllByActiveOrderByNameAsc(active);
   }
 }

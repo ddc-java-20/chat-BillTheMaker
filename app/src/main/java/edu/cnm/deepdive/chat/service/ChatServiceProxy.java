@@ -5,6 +5,7 @@ import edu.cnm.deepdive.chat.model.dto.Message;
 import edu.cnm.deepdive.chat.model.dto.User;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import retrofit2.http.Body;
@@ -43,7 +44,7 @@ public interface ChatServiceProxy {
 
   @POST("channels/{key}/messages")
   Single<List<Message>> postMessage(@Body Message message, @Path("key") UUID key,
-      @Query("since") long since, @Header("Authorization") String bearerToken);
+      @Query("since") Instant since, @Header("Authorization") String bearerToken);
 
 
 }
