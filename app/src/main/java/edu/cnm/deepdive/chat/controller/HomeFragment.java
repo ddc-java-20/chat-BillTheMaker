@@ -8,6 +8,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -21,18 +23,22 @@ import dagger.hilt.android.AndroidEntryPoint;
 import edu.cnm.deepdive.chat.R;
 import edu.cnm.deepdive.chat.databinding.FragmentHomeBinding;
 import edu.cnm.deepdive.chat.model.dto.Channel;
+import edu.cnm.deepdive.chat.model.dto.Message;
 import edu.cnm.deepdive.chat.viewmodel.LoginViewModel;
 import edu.cnm.deepdive.chat.viewmodel.MessageViewModel;
+import java.util.List;
 
 /** @noinspection SequencedCollectionMethodCanBeUsed*/
 @AndroidEntryPoint
-public class HomeFragment extends Fragment implements MenuProvider {
+public class HomeFragment extends Fragment implements MenuProvider, OnItemSelectedListener {
 
   private static final String TAG = HomeFragment.class.getSimpleName();
 
   private FragmentHomeBinding binding;
   private LoginViewModel loginViewModel;
   private MessageViewModel messageViewModel;
+  private Channel selectedChannel;
+  private List<Channel> channels;
 
   @Nullable
   @Override
@@ -40,6 +46,14 @@ public class HomeFragment extends Fragment implements MenuProvider {
     binding = FragmentHomeBinding.inflate(inflater, container, false);
     // TODO: 3/19/2025 attach listener to send button so that when clicked a new message instance is created
     //  and passed to messageViewModel
+    binding.channels.setOnItemSelectedListener(this);
+    binding.send.setOnClickListener((v) -> {
+      Message message = new Message();
+      //noinspection DataFlowIssue
+      message.setText(binding.message.getText().toString().strip());
+      messageViewModel.sendMessage(message);
+      binding.message.setText("");
+    });
     return binding.getRoot();
   }
 
@@ -73,25 +87,6 @@ public class HomeFragment extends Fragment implements MenuProvider {
     return handled;
   }
 
-  private void setupMessageViewModel(LifecycleOwner owner) {
-    messageViewModel = new ViewModelProvider(this)
-        .get(MessageViewModel.class);
-    getLifecycle().addObserver(messageViewModel);
-    messageViewModel
-        .getChannels()
-        .observe(owner, channels -> {
-          ArrayAdapter<Channel> adapter = new ArrayAdapter<>(requireContext(),
-              android.R.layout.simple_dropdown_item_1line, channels);
-          binding.channels.setAdapter(adapter);
-        });
-    messageViewModel
-        .getMessages()
-        .observe(owner, messages -> {
-          // TODO: 3/19/2025 Pass data to recyclerview adapter, and notify adapter that the data has changed.
-          // TODO: 3/19/2025 SCroll so that the most recent message is visible.
-        });
-  }
-
   private void setupLoginViewModel(LifecycleOwner owner) {
     loginViewModel = new ViewModelProvider(requireActivity())
         .get(LoginViewModel.class);
@@ -105,5 +100,53 @@ public class HomeFragment extends Fragment implements MenuProvider {
                 .navigate(HomeFragmentDirections.navigateToPreLoginFragment());
           }
         });
+  }
+
+  private void setupMessageViewModel(LifecycleOwner owner) {
+    messageViewModel = new ViewModelProvider(this)
+        .get(MessageViewModel.class);
+    getLifecycle().addObserver(messageViewModel);
+    messageViewModel
+        .getChannels()
+        .observe(owner, channels -> {
+          this.channels = channels;
+          ArrayAdapter<Channel> adapter = new ArrayAdapter<>(requireContext(),
+              android.R.layout.simple_dropdown_item_1line, channels);
+          binding.channels.setAdapter(adapter);
+          setChannelSelection();
+        });
+    messageViewModel
+        .getMessages()
+        .observe(owner, messages -> {
+          // TODO: 3/19/2025 Pass data to recyclerview adapter, and notify adapter that the data has changed.
+          // TODO: 3/19/2025 SCroll so that the most recent message is visible.
+        });
+    messageViewModel
+        .getSelectedChannel()
+        .observe(owner, (channel) -> {
+          selectedChannel = channel;
+          setChannelSelection();
+        });
+  }
+
+  private void setChannelSelection() {
+    if (channels != null && selectedChannel != null) {
+      int position = channels.indexOf(selectedChannel);
+      if (position >= 0) {
+        binding.channels.setSelection(position, true);
+      }
+    }
+  }
+
+
+  @Override
+  public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+    Channel channel = (Channel) parent.getItemAtPosition(position);
+    messageViewModel.setSelectedChannel(channel);
+  }
+
+  @Override
+  public void onNothingSelected(AdapterView<?> parent) {
+    //  Ignore
   }
 }
