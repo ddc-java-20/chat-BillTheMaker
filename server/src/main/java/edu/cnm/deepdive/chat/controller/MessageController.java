@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.DeferredResult;
 
 @RestController
-@RequestMapping("/channels/{channelKey}/messages")
+@RequestMapping("/channels/{channelKey:[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}}/messages")
 public class MessageController {
 
   private static final String DEFAULT_SINCE_VALUE = "-1000000000-01-01T00:00:00Z";

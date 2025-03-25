@@ -21,12 +21,11 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
 import java.time.Instant;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.UUID;
+import org.antlr.v4.runtime.misc.NotNull;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.validator.constraints.Length;
 
-@SuppressWarnings("JpaDataSourceORMInspection")
 @Entity
 @Table(indexes = {
     @Index(columnList = "channel_id, posted")
@@ -51,6 +50,8 @@ public class Message {
   private Instant posted;
 
   @Column(nullable = false, updatable = false, length = 255)
+  @NotNull
+  @Length(min = 1, max = 255)
   private String text;
 
   @ManyToOne(fetch = FetchType.EAGER, optional = false)

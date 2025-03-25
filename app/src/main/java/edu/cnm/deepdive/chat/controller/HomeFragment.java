@@ -8,6 +8,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.view.MenuProvider;
@@ -19,6 +20,7 @@ import androidx.navigation.Navigation;
 import dagger.hilt.android.AndroidEntryPoint;
 import edu.cnm.deepdive.chat.R;
 import edu.cnm.deepdive.chat.databinding.FragmentHomeBinding;
+import edu.cnm.deepdive.chat.model.dto.Channel;
 import edu.cnm.deepdive.chat.viewmodel.LoginViewModel;
 import edu.cnm.deepdive.chat.viewmodel.MessageViewModel;
 
@@ -78,8 +80,9 @@ public class HomeFragment extends Fragment implements MenuProvider {
     messageViewModel
         .getChannels()
         .observe(owner, channels -> {
-          // TODO: 3/19/2025 attach an ArrayAdapter to a spinner to display the channels.
-          messageViewModel.setSelectedChannel(channels.get(0));
+          ArrayAdapter<Channel> adapter = new ArrayAdapter<>(requireContext(),
+              android.R.layout.simple_dropdown_item_1line, channels);
+          binding.channels.setAdapter(adapter);
         });
     messageViewModel
         .getMessages()
