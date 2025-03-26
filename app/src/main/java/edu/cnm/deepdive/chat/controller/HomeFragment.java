@@ -27,6 +27,7 @@ import edu.cnm.deepdive.chat.model.dto.Message;
 import edu.cnm.deepdive.chat.viewmodel.LoginViewModel;
 import edu.cnm.deepdive.chat.viewmodel.MessageViewModel;
 import java.util.List;
+import java.util.Objects;
 
 /** @noinspection SequencedCollectionMethodCanBeUsed*/
 @AndroidEntryPoint
@@ -46,6 +47,7 @@ public class HomeFragment extends Fragment implements MenuProvider, OnItemSelect
     binding = FragmentHomeBinding.inflate(inflater, container, false);
     // TODO: 3/19/2025 attach listener to send button so that when clicked a new message instance is created
     //  and passed to messageViewModel
+    binding.messages.setAdapter(adapter);
     binding.channels.setOnItemSelectedListener(this);
     binding.send.setOnClickListener((v) -> {
       Message message = new Message();
@@ -93,9 +95,7 @@ public class HomeFragment extends Fragment implements MenuProvider, OnItemSelect
     loginViewModel
         .getAccount()
         .observe(owner, (account) -> {
-          if (account != null) {
-            Log.d(TAG, "Bearer " + account.getIdToken());
-          } else {
+          if (account == null) {
             Navigation.findNavController(binding.getRoot())
                 .navigate(HomeFragmentDirections.navigateToPreLoginFragment());
           }
@@ -118,14 +118,20 @@ public class HomeFragment extends Fragment implements MenuProvider, OnItemSelect
     messageViewModel
         .getMessages()
         .observe(owner, messages -> {
-          // TODO: 3/19/2025 Pass data to recyclerview adapter, and notify adapter that the data has changed.
-          // TODO: 3/19/2025 SCroll so that the most recent message is visible.
+          adapter.setMessages(messages);
+          binding.messages.scrollToPosition(messages.size() - 1);
+          binding.loadingIndicator.setVisibility(View.GONE);
         });
     messageViewModel
         .getSelectedChannel()
         .observe(owner, (channel) -> {
-          selectedChannel = channel;
-          setChannelSelection();
+          if (!Objects.equals(selectedChannel, channel)) {
+            selectedChannel = channel;
+            setChannelSelection();
+            adapter.setMesssages(List.of());
+            binding.loadingIndicator.setVisibility(View.VISIBLE);
+
+          }
         });
   }
 
