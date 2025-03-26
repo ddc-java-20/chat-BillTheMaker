@@ -35,7 +35,7 @@ public class ProxyModule {
 
   @Provides
   @Singleton
-  Gson provideGson(InstantDeserializer deserializer) {
+  Gson provideGson(JsonDeserializer<Instant> deserializer) {
     return new GsonBuilder()
         .registerTypeAdapter(Instant.class, deserializer)
         .excludeFieldsWithoutExposeAnnotation()
